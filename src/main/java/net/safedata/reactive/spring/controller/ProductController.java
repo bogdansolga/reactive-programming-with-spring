@@ -13,6 +13,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @RestController
 @RequestMapping("/product")
@@ -39,11 +40,13 @@ public class ProductController {
     public Publisher<Product> productsGenerator() {
         Hooks.onOperatorDebug(); // enable the Project Reactor debug mode
 
-        return Flux.<Product>generate(sink -> sink.next(new Product(5, "iSome", 200)))
+        final AtomicInteger atomicInteger = new AtomicInteger(0);
+
+        return Flux.<Product>generate(sink -> sink.next(new Product(atomicInteger.incrementAndGet(), "iSomething", 200)))
                 .parallel(CORES)
                 .sequential() // for demoing purposes only
                 .checkpoint("before")
-                .delayElements(Duration.ofMillis(100))
+                .delayElements(Duration.ofMillis(10))
                 .onBackpressureBuffer(100, BufferOverflowStrategy.DROP_OLDEST)
                 .checkpoint("after")
                 .onErrorMap(exception -> new RuntimeException(exception.getMessage()))
